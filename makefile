@@ -745,7 +745,7 @@ $(PROGRAM): $(OBJS) $(W32_FILES)
 	$(LD) $(LDFLAGS) -o $(PROGRAM) $(OBJS) $(LIBS)
 
 clean:
-	$(RM) a.out $(OBJS) $(W32_FILES) $(W32_INIS) $(PROGRAM) default.action \
+	$(RM) a.out $(OBJS) $(W32_FILES) $(W32_INIS)  default.action \
 		`find . -name TAGS -o -name tags | $(GREP) -v .git` config.base config.tmp
 
 clean-editor-files:
