@@ -1,0 +1,101 @@
+<html>
+	<head>
+		<style>	
+			body {
+				
+			}
+			
+			#wrapper {
+				width: 980px;
+				font-family: "Raleway","Ubuntu","Helvetica Neue","Helvetica","Arial",sans-serif;
+				line-height: 24px;
+				margin: 0 0 16px;
+				font-weight: 500;
+				margin-left: auto;
+				margin-right: auto;
+				margin-top: 20px;
+				margin-bottom: 20px;
+				box-shadow: 0 0 20px #53728E;
+				background: #F0F0F0;
+				padding: 5px;
+			}
+			
+			#header {
+				font-size: 20px;
+				line-height: 3;
+				text-align:center;
+				margin-top:10 px;
+			}
+			
+			#content {
+			}	
+			
+			#code {
+				background: white;
+				padding: 10px;
+				margin-right: 15px;
+				color: green;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				 <h2>Install asix's driver ethernet to usb converter</h2>
+			</div>
+			
+			<div id="content">
+				<ol>
+					<li>Dowload asix's driver at <a href="http://www.asix.com.tw/FrootAttach/driver/AX88772C_772B_772A_760_772_178_LINUX_Driver_v4.6.0_Source.tar.bz2">URL</a>.</li>
+					<li>
+						Download & compile Raspidebian's kernel source
+						<ul>
+							<li>Download kernel source: <strong>$git clone https://github.com/raspberrypi/linux.git</strong><br>
+							It will be at drirectory <strong>linux</strong>.</li>
+							<li>Compile kernel:</li>
+							<ul>
+								<li>On the Ubuntu install packages: <strong>$apt-get install gcc-4.6-arm-linux-gnueabi libncurses5-dev</strong></li>
+								<li><strong>$sudo ln -s /usr/bin/arm-linux-gnueabi-gcc-4.6 /usr/bin/arm-linux-gnueabi-gcc</strong></li>
+								<li>On rasp get .config file: <strong>$zcat /proc/config.gz > .config</strong></li>
+								<li>Copy .config on rasp to .../rasp-kernel-header/ directoty on Ubuntu.</li>
+								<li>
+										Compile kernel source:<br>
+					
+										At .../linux <strong>$make O=../rasp-kernel-header/ -j 3 ARCH=arm CROSS_COMPILE=/usr/bin/arm-linux-gnueabi- -k</strong><br>
+										Kernel header will be at .../rasp-kernel-header
+								</li>
+							</ul>
+						</ul>
+					</li>
+					<li>
+						Build asix driver
+						<ul>	
+							<li>
+								Edit Makefile as follow:<br>
+								<div id="code">
+								obj-m := asix.o<br>
+								all:<br>
+								make  ARCH=arm -C /home/ceslab/Desktop/rasp-kernel-header CROSS_COMPILE=/usr/bin/arm-linux-gnueabi-  M=`pwd` modules
+								</div>
+							</li>
+							<li>
+								$make. Then we get asix.ko is driver module
+							</li>
+						</ul>
+					</li>
+					<li>
+						Install asix.ko on raspi board
+							<ul>
+								<li>On rasp create directory net at /lib/modules/3.6.11+/kernel/drivers/usb</li>
+								<li>Copy asix.ko to from ubuntu to rasp</li>
+								<li>$sudo cp .../asix.ko /lib/modules/3.6.11+/kernel/drivers/usb && sudo depmod -a</li>
+								<li>$sudo reboot</li>
+							</ul>
+					</li>
+				</ol>
+			</div>
+		</div>
+		
+	</body>
+</html>
+

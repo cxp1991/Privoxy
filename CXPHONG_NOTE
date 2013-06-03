@@ -1,0 +1,31 @@
+1. Load config from config file
+
+2. Bind port: max is 10 socket 
+
+	2.1 create socket: host=127.0.0.1, port=8118
+	2.2 bind socket
+	2.3 listen connection on this socket
+	2.4 accept connection from clients -> wait until clients connect
+
+3. Acept connection:
+
+	3.1 Load filter file
+	3.2 Permit client connection use access-list
+	3.3 Start a new thread
+
+4. "serve" client request(serve())
+	4.1 get request line from clients(receive_client_request()) : get header -> get request line(first line) from header
+			get_request_line()
+		4.1.1 Wait (with fixed time out, default is 300s) data from clients (HTTP request) (data_is_available)
+		4.1.2 Read data from client (read_socket())
+		4.1.3 Add data into client io buffer (add_to_iob())
+		4.1.4 Get header from io buffer(get_header())
+				4.2.4.1 Get request from header (get_header_line())
+		result ex: "GET http://www.dantri.com.vn HTTP/1.1"
+	4.2 Check protocol from request line is supported (dont't support ftp & gopher request)
+	4.3 Get information from http request: method, url , http version (parse_http_request)
+	4.4 Check above information is legal
+	4.5 Get information about url: address, port, ssl or not
+	4.6 Get all remainder request header
+	4.7 Get action from this url: through 3 file: match-all.action, default.action, user.action
+	

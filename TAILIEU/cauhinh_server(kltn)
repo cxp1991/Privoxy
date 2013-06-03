@@ -1,0 +1,99 @@
+
+1. Dùng Board như dns server & dhcp server:
+===========================================
+
+	 Cấu hình dns server và dhcp server:
+	 ----------------------------------
+		* Cài đặt package dnsmasq: #apt-get install dnsmasq
+		* Cấu hình dnsmasq tại file /etc/dnsmasq.conf
+			- interface=eth1 #interface sẽ lắng nghe yêu cầu dns & dhcp
+			- expand-hosts   #cho phép /etc/hosts cảu server áp dụng cho toàn subnet
+			- dhcp-range=192.168.1.10,192.168.1.250,255.255.255.0,12h #tạo một range ip
+			- dhcp-option=option:router,192.168.1.254 #default gateway
+			- dns server là ip của eth1 (server)
+		* Restart dnsmasq: #service dnsmasq restart
+
+	Cấu hình NAT để client có thể kết nối được với interrnet:
+	--------------------------------------------------------	
+		* Mở file /etc/rc.local và điền vào những nội dung sau đây:
+
+			http://www.cyberciti.biz/tips/linux-setup-transparent-proxy-squid-howto.html
+		
+		Các lệnh ghi trong file rc.local sẽ được thực thi ở quyền root lúc khởi động
+
+	Cấu hình ip tĩnh eth1 (server):
+	---------------------------------
+		* Mở /etc/network/interface và điền vào nhữ dòng sau:
+
+			auto lo
+			iface lo inet loopback
+			iface eth0 inet dhcp
+
+			auto eth1
+			iface eth1 inet static 
+			address  192.168.1.254
+			netmask 255.255.255.0
+
+
+		Nhớ cắm eth1 card trước lúc boot để quá trình boot diễn ra nhanh.
+
+	Cài đặt và cấu hình privoxy:
+	----------------------------
+		apt-get install privoxy
+	
+		#/Trong /etc/privoxy/config
+		accept-intercepted-requests 1	#Biến privoxy thành transparent proxy
+		listen-address  192.168.1.254:8118	
+
+2. Cấu hình Board như một bridge:
+   ============================= 
+	
+	Cấu hình Bridge:
+	===============
+
+		+ Cài đặt packet bridge-utils:  sudo apt-get install bridge-utils 
+		+ Cấu hình bridge:
+
+			Trong file /etc/network/interfaces:
+
+			# interfaces(5) file used by ifup(8) and ifdown(8) 
+			auto lo 
+			iface lo inet loopback 
+
+			iface eth0 inet dhcp 
+
+			auto br0 
+			iface br0 inet dhcp 
+			  bridge_ports eth0 eth1 
+			  bridge_stp no 
+			  bridge_fd 0 
+			  bridge_maxwait 0 
+
+			Khởi động lại hệ thống.
+
+	Cấu hình NAT để client có thể kết nối được với interrnet:
+	--------------------------------------------------------	
+		* Mở file /etc/rc.local và điền vào những nội dung sau đây:
+
+			http://www.cyberciti.biz/tips/linux-setup-transparent-proxy-squid-howto.html
+		
+		Các lệnh ghi trong file rc.local sẽ được thực thi ở quyền root lúc khởi động
+
+	Cài đặt và cấu hình privoxy:
+	----------------------------
+		apt-get install privoxy
+	
+		#/Trong /etc/privoxy/config
+		accept-intercepted-requests 1	#Biến privoxy thành transparent proxy
+		listen-address  10.10.2.5:8118	
+
+
+
+
+
+
+
+
+
+
+
