@@ -243,7 +243,10 @@ SPECIAL_CFLAGS = -pthread
 # Add your flags here
 OTHER_CFLAGS =
 
-CFLAGS = -pipe -O2  $(OTHER_CFLAGS) $(SPECIAL_CFLAGS) -Wall \
+#CFLAGS = -pipe -O2  $(OTHER_CFLAGS) $(SPECIAL_CFLAGS) -Wall \
+#          -Ipcre
+
+CFLAGS = -pipe   $(OTHER_CFLAGS) $(SPECIAL_CFLAGS) -Wall \
           -Ipcre
 
 LDFLAGS =  $(DEBUG_CFLAGS) $(SPECIAL_CFLAGS)
@@ -269,7 +272,7 @@ PID_DEST check_doc install-strip uninstall GROUP_T
 # Define this explicitly because Solaris is broken!
 #############################################################################
 %.o: %.c
-	$(CC) -g -c $(CFLAGS) $(CPPFLAGS) $< -o $@
+	$(CC) -g -c  $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 
 #############################################################################
@@ -473,8 +476,8 @@ man: dok-release
 	mkdir -p doc/source/temp && cd doc/source/temp && $(RM) * ;\
 	nsgmls ../privoxy-man-page.sgml  | sgmlspl ../../../utils/docbook2man/docbook2man-spec.pl &&\
 	perl -pi.bak -e 's/ <URL:.*>//; s/\[ /\[/g' $(MAN_PAGE) ;\
-	perl -pi.bak -e "s/\[ /\[/g;s/á/\\\\['a]/g;s/é/\\\\['e]/g" $(MAN_PAGE); \
-	perl -pi.bak -e "s/ö/\\\\[:o]/g" $(MAN_PAGE); \
+	perl -pi.bak -e "s/\[ /\[/g;s/ï¿½/\\\\['a]/g;s/ï¿½/\\\\['e]/g" $(MAN_PAGE); \
+	perl -pi.bak -e "s/ï¿½/\\\\[:o]/g" $(MAN_PAGE); \
 	perl -pi.bak -e 's/([ {])-([a-z])/$$1\\-$$2/g' $(MAN_PAGE); \
 	perl -pi.bak -e 's/ --([a-z])/ \\-\\-$$1/g' $(MAN_PAGE); \
 	perl -pi.bak -e 's/\\fB--/\\fB\\-\\-/g' $(MAN_PAGE); \
