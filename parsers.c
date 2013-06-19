@@ -383,6 +383,87 @@ jb_err add_to_iob(struct client_state *csp, char *buf, long n)
 
 }
 
+/*********************************************************************
+ *
+ * Function    :  add_to_iob_filter
+ *
+ * Description :  Add content to the buffered page, expanding the
+ *                buffer if necessary.
+ *
+ * Parameters  :
+ *          1  :  csp = Current client state (buffers, headers, etc...)
+ *          2  :  buf = holds the content to be added to the page
+ *          3  :  n = number of bytes to be added
+ *
+ * Returns     :  JB_ERR_OK on success, JB_ERR_MEMORY if out-of-memory
+ *                or buffer limit reached.
+ *
+ *********************************************************************/
+jb_err add_html_to_iob(struct iob *html_iob, char *buf, long n)
+{
+   struct iob *iob = html_iob;
+   size_t used, offset, need;
+   char *p;
+
+   if (n <= 0) return JB_ERR_OK;
+
+   used   = (size_t)(iob->eod - iob->buf);
+   offset = (size_t)(iob->cur - iob->buf);
+   need   = used + (size_t)n + 1;
+
+   /*
+    * If the buffer can't hold the new data, extend it first.
+    * Use the next power of two if possible, else use the actual need.
+    */
+   if (need >  4194304)// buffer_limit = 4MB
+   {
+      log_error(LOG_LEVEL_INFO,
+         "Buffer limit reached while extending the buffer (iob). Needed: %d. Limit: %d",
+         need, 4194304);
+      return JB_ERR_MEMORY;
+   }
+
+   if (need > iob->size)
+   {
+      size_t want = html_iob->size ? html_iob->size : 512;
+
+      while (want <= need)
+      {
+        want *= 2;
+      }
+
+      if (want <=  4194304 && NULL != (p = (char *)realloc(iob->buf, want)))
+      {
+        iob->size = want;
+      }
+      else if (NULL != (p = (char *)realloc(iob->buf, need)))
+      {
+         iob->size = need;
+      }
+      else
+      {
+         log_error(LOG_LEVEL_ERROR, "Extending the buffer (iob) failed: %E");
+         return JB_ERR_MEMORY;
+      }
+
+      /* Update the iob pointers */
+      iob->cur = p + offset;
+      iob->eod = p + used;
+      iob->buf = p;
+   }
+
+   /* copy the new data into the iob buffer */
+   memcpy(iob->eod, buf, (size_t)n);
+
+   /* point to the end of the data */
+   iob->eod += n;
+
+   /* null terminate == cheap insurance */
+   *iob->eod = '\0';
+
+   return JB_ERR_OK;
+
+}
 
 #ifdef FEATURE_ZLIB
 /*********************************************************************

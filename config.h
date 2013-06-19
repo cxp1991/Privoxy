@@ -492,6 +492,9 @@
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #define TIME_WITH_SYS_TIME 1
 
+/* Define allow search and replace content of html file */
+#define SEARCH_AND_REPLACE_CONTENT 1
+
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 /* #undef TM_IN_SYS_TIME */
 

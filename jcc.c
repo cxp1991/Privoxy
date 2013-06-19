@@ -1526,13 +1526,20 @@ static void chat(struct client_state *csp)
    struct http_request *http;
    long len = 0; /* for buffer sizes (and negative error codes) */
    int buffer_and_filter_content = 0;
-   char *buf_replace;
 
    /* Skeleton for HTTP response, if we should intercept the request */
    struct http_response *rsp;
    struct timeval timeout;
 #ifdef FEATURE_CONNECTION_KEEP_ALIVE
    int watch_client_socket = 1;
+#endif
+
+#ifdef SEARCH_AND_REPLACE_CONTENT
+   int filter_and_replace_content = 1;
+   struct iob html_buffer[1];
+   int html_header = FALSE;
+   char buffer[BUFFER_SIZE];
+   int size_html = 0;
 #endif
 
    memset(buf, 0, sizeof(buf));
@@ -2041,7 +2048,7 @@ static void chat(struct client_state *csp)
          if (len == 0)
          {
 
-            if (server_body || http->ssl)
+            if (server_body || http->ssl)// No affect
             {
                /*
                 * If we have been buffering up the document,
@@ -2088,8 +2095,6 @@ static void chat(struct client_state *csp)
                      log_error(LOG_LEVEL_FATAL, "Out of memory parsing server header");
                   }
 
-	          //buf_replace = replace_str(hdr, "Hello", "cao xuan phong");		
-
                   if (write_socket(csp->cfd, hdr, strlen(hdr))
                    || write_socket(csp->cfd,
                          ((p != NULL) ? p : csp->iob->cur), (size_t)csp->content_length))
@@ -2105,7 +2110,26 @@ static void chat(struct client_state *csp)
                   freez(p);
                }
 
+               // Write html body to client
+               if (filter_and_replace_content && html_header)
+               {
+            	   do
+            	   {
+            		   size_html = read_html_buffer(html_buffer,buffer);
+
+					   if (write_socket(csp->cfd, buffer, size_html))
+					   {
+						   log_error(LOG_LEVEL_ERROR, "write to client failed: %E");
+						   mark_server_socket_tainted(csp);
+						   return;
+					   }
+
+            	   }while(size_html > 0);
+
+               }
+
                break; /* "game over, man" */
+
             }
 
             /*
@@ -2130,7 +2154,7 @@ static void chat(struct client_state *csp)
           */
          if (server_body || http->ssl)
          {
-            if (buffer_and_filter_content)
+            if (buffer_and_filter_content) // nerver go into
             {
                /*
                 * If there is no memory left for buffering the content, or the buffer limit
@@ -2160,9 +2184,7 @@ static void chat(struct client_state *csp)
                   }
                   hdrlen = strlen(hdr);
 
-		  //buf_replace = replace_str(hdr, "Hello", "cao xuan phong");
-                  
-		  if (write_socket(csp->cfd, hdr, hdrlen)
+                  if (write_socket(csp->cfd, hdr, hdrlen)
                    || ((flushed = flush_socket(csp->cfd, csp->iob)) < 0)
                    || (write_socket(csp->cfd, buf, (size_t)len)))
                   {
@@ -2186,12 +2208,19 @@ static void chat(struct client_state *csp)
             }
             else
             {
-               if (write_socket(csp->cfd, buf, (size_t)len))
-               {
-                  log_error(LOG_LEVEL_ERROR, "write to client failed: %E");
-                  mark_server_socket_tainted(csp);
-                  return;
-               }
+            	if (filter_and_replace_content && html_header)
+            	{
+            		add_html_to_iob (html_buffer,buf,len);
+            	}
+            	else
+            	{
+            		if (write_socket(csp->cfd, buf, (size_t)len))
+            		{
+            			log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
+					  	mark_server_socket_tainted (csp);
+					  	return;
+            		}
+            	}
             }
             byte_count += (unsigned long long)len;
             continue;
@@ -2348,34 +2377,39 @@ static void chat(struct client_state *csp)
 
             if (!http->ssl) /* We talk plaintext */
             {
-               buffer_and_filter_content = content_requires_filtering(csp);
+            	buffer_and_filter_content = content_requires_filtering(csp);
             }
             /*
              * Only write if we're not buffering for content modification
              */
             if (!buffer_and_filter_content)
             {
-               /*
+            	html_header = check_header_is_html(hdr);
+
+            	if (filter_and_replace_content && html_header)
+				{
+					add_html_to_iob (html_buffer,csp->iob->cur,strlen(csp->iob->cur));
+				}
+
+            	/*
                 * Write the server's (modified) header to
                 * the client (along with anything else that
                 * may be in the buffer)
                 */
-
-            	//buf_replace = replace_str(hdr, "Hello", "cao xuan phong");
 
             	if (write_socket(csp->cfd, hdr, strlen(hdr))
             			|| ((len = flush_socket(csp->cfd, csp->iob)) < 0))
             	{
             		log_error(LOG_LEVEL_CONNECT, "write header to client failed: %E");
 
-					  /*
-					   * The write failed, so don't bother mentioning it
+					   /** The write failed, so don't bother mentioning it
 					   * to the client... it probably can't hear us anyway.
 					   */
+
 					  freez(hdr);
 					  mark_server_socket_tainted(csp);
 					  return;
-			   }
+            	}
             }
 
             /* we're finished with the server's header */
