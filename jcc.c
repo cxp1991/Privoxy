@@ -119,6 +119,7 @@ const char jcc_rcs[] = "$Id: jcc.c,v 1.375 2011/12/10 17:26:11 fabiankeil Exp $"
 
 const char jcc_h_rcs[] = JCC_H_VERSION;
 const char project_h_rcs[] = PROJECT_H_VERSION;
+FILE *file;
 
 int daemon_mode = 1;
 struct client_states clients[1];
@@ -1540,6 +1541,7 @@ static void chat(struct client_state *csp)
    int html_header = FALSE;
    char buffer[BUFFER_SIZE];
    int size_html = 0;
+   char *tmpName = NULL;
 #endif
 
    memset(buf, 0, sizeof(buf));
@@ -2110,23 +2112,25 @@ static void chat(struct client_state *csp)
                   freez(p);
                }
 
+               fclose(file);
+               system("rm -rf /tmp/file*");
                // Write html body to client
-               if (filter_and_replace_content && html_header)
-               {
-            	   do
-            	   {
-            		   size_html = read_html_buffer(html_buffer,buffer);
+               //if (filter_and_replace_content && html_header)
+               //{
+            	//   do
+            	 //  {
+            	//	   size_html = read_html_buffer(html_buffer,buffer);
 
-					   if (write_socket(csp->cfd, buffer, size_html))
-					   {
-						   log_error(LOG_LEVEL_ERROR, "write to client failed: %E");
-						   mark_server_socket_tainted(csp);
-						   return;
-					   }
+				//	   if (write_socket(csp->cfd, buffer, size_html))
+				//	   {
+				//		   log_error(LOG_LEVEL_ERROR, "write to client failed: %E");
+				//		   mark_server_socket_tainted(csp);
+				//		   return;
+				//	   }
 
-            	   }while(size_html > 0);
+            	 //  }while(size_html > 0);
 
-               }
+               //}
 
                break; /* "game over, man" */
 
@@ -2210,17 +2214,17 @@ static void chat(struct client_state *csp)
             {
             	if (filter_and_replace_content && html_header)
             	{
-            		add_html_to_iob (html_buffer,buf,len);
+            		fprintf(file,"%s",buf);
+
             	}
-            	else
-            	{
-            		if (write_socket(csp->cfd, buf, (size_t)len))
-            		{
-            			log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
-					  	mark_server_socket_tainted (csp);
-					  	return;
-            		}
-            	}
+
+				if (write_socket(csp->cfd, buf, (size_t)len))
+				{
+					log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
+					mark_server_socket_tainted (csp);
+					return;
+				}
+
             }
             byte_count += (unsigned long long)len;
             continue;
@@ -2388,7 +2392,17 @@ static void chat(struct client_state *csp)
 
             	if (filter_and_replace_content && html_header)
 				{
-					add_html_to_iob (html_buffer,csp->iob->cur,strlen(csp->iob->cur));
+            		tmpName = tmpnam(NULL);
+            		file = fopen(tmpName,"w+");
+
+            		if(file == NULL)
+            		{
+            			printf("Can't open file to write");
+            			fclose(file);
+            		}
+            		else
+            			fprintf(file,"%s",buf);
+
 				}
 
             	/*
