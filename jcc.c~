@@ -1541,7 +1541,7 @@ static void chat(struct client_state *csp)
    char buffer[BUFFER_SIZE];
    int size_html = 0;
    char *tmpName = NULL;
-   FILE *file;
+   FILE *file=NULL;
 #endif
 
    memset(buf, 0, sizeof(buf));

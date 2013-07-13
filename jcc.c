@@ -2114,7 +2114,7 @@ static void chat(struct client_state *csp)
 
 		if(file != NULL)
                	fclose(file);
-               system("rm -rf /tmp/file*");
+               //system("rm -rf /tmp/file*");
                // Write html body to client
                //if (filter_and_replace_content && html_header)
                //{
