@@ -1545,6 +1545,7 @@ static void chat(struct client_state *csp)
 #endif
 
    memset(buf, 0, sizeof(buf));
+   memset(buffer, 0, sizeof(buffer));
 
    http = csp->http;
 
@@ -2113,7 +2114,34 @@ static void chat(struct client_state *csp)
                }
 
 		if(file != NULL)
-               	fclose(file);
+               		fclose(file);
+
+		if (filter_and_replace_content && html_header)
+		{
+			file = NULL;
+			file = fopen(tmpName,"r");
+			int num = 0;
+		
+			if(!file)
+				fprintf(stderr,"Can't open file to  write to client");
+			else
+			{
+				do{
+					num = fread(buffer,1,sizeof(buffer), file);
+					if (write_socket(csp->cfd, buffer, num))
+					{
+						log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
+						mark_server_socket_tainted (csp);
+						return;
+					}
+
+				}while(num > 0);
+			}
+
+			fclose(file);
+		}		
+		
+		
                //system("rm -rf /tmp/file*");
                // Write html body to client
                //if (filter_and_replace_content && html_header)
@@ -2217,15 +2245,15 @@ static void chat(struct client_state *csp)
             	{
             		fprintf(file,"%s",buf);
 
-            	}
+            	}else{
 
-				if (write_socket(csp->cfd, buf, (size_t)len))
-				{
-					log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
-					mark_server_socket_tainted (csp);
-					return;
-				}
-
+			if (write_socket(csp->cfd, buf, (size_t)len))
+			{
+				log_error (LOG_LEVEL_ERROR, "write to client failed: %E");
+				mark_server_socket_tainted (csp);
+				return;
+			}
+		}
             }
             byte_count += (unsigned long long)len;
             continue;
@@ -2392,7 +2420,7 @@ static void chat(struct client_state *csp)
             	html_header = check_header_is_html(hdr);
 
             	if (filter_and_replace_content && html_header)
-				{
+		{
             		tmpName = tmpnam(NULL);
             		file = fopen(tmpName,"w+");
 
@@ -2403,28 +2431,27 @@ static void chat(struct client_state *csp)
             		}
             		else
             			fprintf(file,"%s",hdr);
+	   	}else{
+			/*
+		        * Write the server's (modified) header to
+		        * the client (along with anything else that
+		        * may be in the buffer)
+		        */
 
-				}
+		    	if (write_socket(csp->cfd, hdr, strlen(hdr))
+		    			|| ((len = flush_socket(csp->cfd, csp->iob)) < 0))
+		    	{
+		    		log_error(LOG_LEVEL_CONNECT, "write header to client failed: %E");
 
-            	/*
-                * Write the server's (modified) header to
-                * the client (along with anything else that
-                * may be in the buffer)
-                */
+				   /** The write failed, so don't bother mentioning it
+				   * to the client... it probably can't hear us anyway.
+				   */
 
-            	if (write_socket(csp->cfd, hdr, strlen(hdr))
-            			|| ((len = flush_socket(csp->cfd, csp->iob)) < 0))
-            	{
-            		log_error(LOG_LEVEL_CONNECT, "write header to client failed: %E");
-
-					   /** The write failed, so don't bother mentioning it
-					   * to the client... it probably can't hear us anyway.
-					   */
-
-					  freez(hdr);
-					  mark_server_socket_tainted(csp);
-					  return;
-            	}
+				  freez(hdr);
+				  mark_server_socket_tainted(csp);
+				  return;
+		    	}
+		}
             }
 
             /* we're finished with the server's header */
