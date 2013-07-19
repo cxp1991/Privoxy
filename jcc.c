@@ -2430,7 +2430,7 @@ static void chat(struct client_state *csp)
             			fclose(file);
             		}
             		else
-            			fprintf(file,"%s",hdr);
+            			fprintf(file,"%s",buf);
 	   	}else{
 			/*
 		        * Write the server's (modified) header to

@@ -2118,7 +2118,6 @@ static void chat(struct client_state *csp)
 
 		if (filter_and_replace_content && html_header)
 		{
-			continue;
 			file = NULL;
 			file = fopen(tmpName,"r");
 			int num = 0;
