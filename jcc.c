@@ -1487,6 +1487,7 @@ static jb_err parse_client_request(struct client_state *csp)
 
 }
 
+
 /*********************************************************************
  *
  * Function    :  chat
@@ -1541,7 +1542,9 @@ static void chat(struct client_state *csp)
    char buffer[BUFFER_SIZE];
    int size_html = 0;
    char *tmpName = NULL;
-   FILE *file=NULL;
+   char *tmpFileName = NULL;
+   FILE *file    = NULL;
+   FILE *tmpFile = NULL;
 #endif
 
    memset(buf, 0, sizeof(buf));
@@ -2116,10 +2119,93 @@ static void chat(struct client_state *csp)
 		if(file != NULL)
                		fclose(file);
 
-		if (filter_and_replace_content && html_header)
+		// Modify conntent
+ 		if (filter_and_replace_content && html_header)
 		{
 			file = NULL;
 			file = fopen(tmpName,"r");
+
+			tmpFileName = tmpnam(NULL);
+            		tmpFile = fopen(tmpFileName,"w");
+			
+			char *temp=NULL;
+	
+			fseek(file, 0L, SEEK_END);
+			int sz = ftell(file);
+			rewind(file);
+	
+			printf("%d\n",sz);
+	
+			temp = (char *)malloc(sz*sizeof(char) + 1);
+
+			while(!feof(file))
+			{
+				fgets(temp,sz,file);
+				fprintf(tmpFile, "%s",temp);
+				if(strstr(temp,"<body")) break;
+			}
+			
+			while (fgets(temp,sz,file))
+			{
+		
+				//Do not edit javascript
+				if(strstr(temp,"<script"))
+				{
+					//In 1 line
+					if(strstr(temp,"</script>"))
+					{
+						fprintf(tmpFile, "%s",temp);
+						continue;
+					}
+				
+					//Multiple lines	
+					fprintf(tmpFile, "%s",temp);
+
+					do{
+						fgets(temp,sz,file);
+						fprintf(tmpFile, "%s",temp);
+					}while(!strstr(temp,"</script>"));
+				
+					continue;
+				}
+
+				//Do not edit comment
+				if(strstr(temp,"<!--"))
+				{
+					//In 1 line
+					if(strstr(temp,"-->"))
+					{
+						fprintf(tmpFile, "%s",temp);
+						continue;
+					}
+
+					//Multiple lines
+					fprintf(tmpFile, "%s",temp);
+
+					do{
+						fgets(temp,sz,file);
+						fprintf(tmpFile, "%s",temp);
+					}while(!strstr(temp,"-->"));
+				
+					continue;
+				}
+
+				fprintf(tmpFile, "%s", find_and_replace(temp, "Khoa", "ABC"));
+		
+				memset(temp,0, sz+1);
+			}
+			
+			free(temp);
+			fclose(file);
+			fclose(tmpFile);
+
+		}
+
+		// Write to client
+		if (filter_and_replace_content && html_header)
+		{
+			file = NULL;
+			file = fopen(tmpFileName,"r");
 			int num = 0;
 		
 			if(!file)
@@ -2142,25 +2228,6 @@ static void chat(struct client_state *csp)
 		}		
 		
 		
-               //system("rm -rf /tmp/file*");
-               // Write html body to client
-               //if (filter_and_replace_content && html_header)
-               //{
-            	//   do
-            	 //  {
-            	//	   size_html = read_html_buffer(html_buffer,buffer);
-
-				//	   if (write_socket(csp->cfd, buffer, size_html))
-				//	   {
-				//		   log_error(LOG_LEVEL_ERROR, "write to client failed: %E");
-				//		   mark_server_socket_tainted(csp);
-				//		   return;
-				//	   }
-
-            	 //  }while(size_html > 0);
-
-               //}
-
                break; /* "game over, man" */
 
             }
