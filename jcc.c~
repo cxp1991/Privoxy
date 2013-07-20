@@ -1545,6 +1545,7 @@ static void chat(struct client_state *csp)
    char *tmpFileName = NULL;
    FILE *file    = NULL;
    FILE *tmpFile = NULL;
+   char command[100];
 #endif
 
    memset(buf, 0, sizeof(buf));
@@ -2119,6 +2120,13 @@ static void chat(struct client_state *csp)
 		if(file != NULL)
                		fclose(file);
 
+		if (filter_and_replace_content && html_header)
+		{
+			memset(command, 0, sizeof(command));
+			sprintf(command,"wget -O - %s > %s", csp->http->host, tmpName);
+			system(command);				
+		}
+
 		// Modify conntent
  		if (filter_and_replace_content && html_header)
 		{
@@ -2190,7 +2198,7 @@ static void chat(struct client_state *csp)
 					continue;
 				}
 
-				fprintf(tmpFile, "%s", find_and_replace(temp, "Khoa", "ABC"));
+				fprintf(tmpFile, "%s", find_and_replace(temp, "hot girl", "con chó cái"));
 		
 				memset(temp,0, sz+1);
 			}
@@ -2225,8 +2233,17 @@ static void chat(struct client_state *csp)
 			}
 
 			fclose(file);
-		}		
-		
+				
+			// Remove temporary files
+			//memset(command, 0, sizeof(command));
+			//sprintf(command,"rm -rf %s", tmpName);
+
+			//memset(command, 0, sizeof(command));
+			//sprintf(command,"rm -rf %s", tmpFileName);
+			//system(command);
+		}
+
+		system("sudo rm -rf /tmp/file*");		
 		
                break; /* "game over, man" */
 
@@ -2310,8 +2327,7 @@ static void chat(struct client_state *csp)
             {
             	if (filter_and_replace_content && html_header)
             	{
-            		fprintf(file,"%s",buf);
-
+            		//fprintf(file,"%s",buf);
             	}else{
 
 			if (write_socket(csp->cfd, buf, (size_t)len))
@@ -2489,15 +2505,15 @@ static void chat(struct client_state *csp)
             	if (filter_and_replace_content && html_header)
 		{
             		tmpName = tmpnam(NULL);
-            		file = fopen(tmpName,"w+");
+            		//file = fopen(tmpName,"w+");
 
-            		if(file == NULL)
-            		{
-            			printf("Can't open file to write");
-            			fclose(file);
-            		}
-            		else
-            			fprintf(file,"%s",buf);
+            		//if(file == NULL)
+            		//{
+            		//	printf("Can't open file to write");
+            		//	fclose(file);
+            		//}
+            		//else
+            		//	fprintf(file,"%s",buf);
 	   	}else{
 			/*
 		        * Write the server's (modified) header to
