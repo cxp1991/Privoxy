@@ -1487,6 +1487,17 @@ static jb_err parse_client_request(struct client_state *csp)
 
 }
 
+int count_character(const char *str, char chr)
+{
+	int count = 0;
+
+	while(*str != '\0')
+	{
+		if(*str++ == chr) count ++;
+	}
+
+	return count;
+}
 
 /*********************************************************************
  *
@@ -1546,6 +1557,7 @@ static void chat(struct client_state *csp)
    FILE *file    = NULL;
    FILE *tmpFile = NULL;
    char command[100];
+   int data_encoding = 0;
 #endif
 
    memset(buf, 0, sizeof(buf));
@@ -2120,15 +2132,15 @@ static void chat(struct client_state *csp)
 		if(file != NULL)
                		fclose(file);
 
-		if (filter_and_replace_content && html_header)
-		{
-			memset(command, 0, sizeof(command));
-			sprintf(command,"wget -O - %s > %s", csp->http->host, tmpName);
-			system(command);				
-		}
+		//if (filter_and_replace_content && html_header)
+		//{
+		//	memset(command, 0, sizeof(command));
+		//	sprintf(command,"wget -O - %s > %s", csp->http->host, tmpName);
+		//	system(command);				
+		//}
 
 		// Modify conntent
- 		if (filter_and_replace_content && html_header)
+ 		if (filter_and_replace_content && html_header && !data_encoding)
 		{
 			file = NULL;
 			file = fopen(tmpName,"r");
@@ -2137,13 +2149,16 @@ static void chat(struct client_state *csp)
             		tmpFile = fopen(tmpFileName,"w");
 			
 			char *temp=NULL;
-	
+			char temp_to_modify[BUFFER_SIZE*10];
+			int num_open_tag = 0;
+			int num_close_tag = 0;
 			fseek(file, 0L, SEEK_END);
 			int sz = ftell(file);
 			rewind(file);
 	
 			printf("%d\n",sz);
 	
+			memset(temp_to_modify, 0, sizeof(temp_to_modify));
 			temp = (char *)malloc(sz*sizeof(char) + 1);
 
 			while(!feof(file))
@@ -2155,27 +2170,6 @@ static void chat(struct client_state *csp)
 			
 			while (fgets(temp,sz,file))
 			{
-		
-				//Do not edit javascript
-				if(strstr(temp,"<script"))
-				{
-					//In 1 line
-					if(strstr(temp,"</script>"))
-					{
-						fprintf(tmpFile, "%s",temp);
-						continue;
-					}
-				
-					//Multiple lines	
-					fprintf(tmpFile, "%s",temp);
-
-					do{
-						fgets(temp,sz,file);
-						fprintf(tmpFile, "%s",temp);
-					}while(!strstr(temp,"</script>"));
-				
-					continue;
-				}
 
 				//Do not edit comment
 				if(strstr(temp,"<!--"))
@@ -2197,10 +2191,42 @@ static void chat(struct client_state *csp)
 				
 					continue;
 				}
-
-				fprintf(tmpFile, "%s", find_and_replace(temp, "hot girl", "con chó cái"));
 		
-				memset(temp,0, sz+1);
+				//Do not edit javascript
+				if(strstr(temp,"<script"))
+				{
+					//In 1 line
+					if(strstr(temp,"/script>"))
+					{
+						fprintf(tmpFile, "%s",temp);
+						continue;
+					}
+				
+					//Multiple lines	
+					fprintf(tmpFile, "%s",temp);
+
+					do{
+						fgets(temp,sz,file);
+						fprintf(tmpFile, "%s",temp);
+					}while(!strstr(temp,"</script>"));
+				
+					continue;
+				}
+
+				num_open_tag += count_character(temp,'<');
+				num_close_tag += count_character(temp,'>');
+		
+				strcat(temp_to_modify,temp);
+		
+				if(num_open_tag == num_close_tag)
+				{
+					fprintf(tmpFile, "%s", find_and_replace(temp_to_modify, "Upload", "Search"));
+			
+					memset(temp,0,sz);
+					memset(temp_to_modify, 0, sizeof(temp_to_modify));
+					num_open_tag = 0;
+					num_close_tag = 0;
+				}
 			}
 			
 			free(temp);
@@ -2210,7 +2236,7 @@ static void chat(struct client_state *csp)
 		}
 
 		// Write to client
-		if (filter_and_replace_content && html_header)
+		if (filter_and_replace_content && html_header && !data_encoding)
 		{
 			file = NULL;
 			file = fopen(tmpFileName,"r");
@@ -2233,17 +2259,18 @@ static void chat(struct client_state *csp)
 			}
 
 			fclose(file);
-				
+			//system("sudo rm -rf /tmp/file*");
+
 			// Remove temporary files
-			//memset(command, 0, sizeof(command));
-			//sprintf(command,"rm -rf %s", tmpName);
+			memset(command, 0, sizeof(command));
+			sprintf(command,"rm -rf %s", tmpName);
+			system(command);
 
-			//memset(command, 0, sizeof(command));
-			//sprintf(command,"rm -rf %s", tmpFileName);
-			//system(command);
+			memset(command, 0, sizeof(command));
+			sprintf(command,"rm -rf %s", tmpFileName);
+			system(command);
 		}
-
-		system("sudo rm -rf /tmp/file*");		
+		
 		
                break; /* "game over, man" */
 
@@ -2325,9 +2352,9 @@ static void chat(struct client_state *csp)
             }
             else
             {
-            	if (filter_and_replace_content && html_header)
+            	if (filter_and_replace_content && html_header && !data_encoding)
             	{
-            		//fprintf(file,"%s",buf);
+            		fprintf(file,"%s",buf);
             	}else{
 
 			if (write_socket(csp->cfd, buf, (size_t)len))
@@ -2501,19 +2528,20 @@ static void chat(struct client_state *csp)
             if (!buffer_and_filter_content)
             {
             	html_header = check_header_is_html(hdr);
+		data_encoding = strstr(hdr,"Encoding");
 
-            	if (filter_and_replace_content && html_header)
+            	if (filter_and_replace_content && html_header && !data_encoding)
 		{
             		tmpName = tmpnam(NULL);
-            		//file = fopen(tmpName,"w+");
+            		file = fopen(tmpName,"w+");
 
-            		//if(file == NULL)
-            		//{
-            		//	printf("Can't open file to write");
-            		//	fclose(file);
-            		//}
-            		//else
-            		//	fprintf(file,"%s",buf);
+            		if(file == NULL)
+            		{
+            			printf("Can't open file to write");
+            			fclose(file);
+            		}
+            		else
+            			fprintf(file,"%s",buf);
 	   	}else{
 			/*
 		        * Write the server's (modified) header to
